@@ -29,14 +29,34 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "driver.h"
+
+#if BOARD_LONGBOARD32
+#include "../USB_DEVICE/App/usbd_cdc_if.h"
+#include "../USB_DEVICE/App/usb_device.h"
+
+#include "stm32f4xx_hal_flash.h"
+
+#endif
+
 #include "boot_ent_plugin.h"
 
+static on_report_options_ptr on_report_options;
 
 status_code_t enter_dfu (sys_state_t state, char *args)
 {
 
+hal.stream.write("[MSG:Warning: Entering DFU Bootloader]" ASCII_EOL);
+hal.delay_ms(100, NULL);
+#if BOARD_LONGBOARD32
 
-hal.stream.write("Entering DFU Bootloader" ASCII_EOL);
+    __disable_irq();
+    *((unsigned long *)0x2003FFF0) = 0xDEADBEEF;
+    __disable_irq();
+    NVIC_SystemReset();
+
+#endif
+
 return Status_OK;
 }
 
@@ -49,8 +69,8 @@ return Status_OK;
 }
 
 const sys_command_t boot_command_list[] = {
-    {"dfu", enter_dfu, { .noargs = On }}
-	{"uf2", enter_uf2, { .noargs = On }}
+    {"DFU", On, enter_dfu},
+	{"UF2", On, enter_uf2}
 };
 
 static sys_commands_t boot_commands = {
@@ -80,46 +100,10 @@ static void warning_msg (uint_fast16_t state)
 void my_plugin_init (void)
 {
     
-
 	on_report_options = grbl.on_report_options;
 	grbl.on_report_options = report_options;
 
     boot_commands.on_get_commands = grbl.on_get_commands;
     grbl.on_get_commands = boot_get_commands;
 
-    stream.write = NULL;
-
-    //protocol_enqueue_rt_command(warning_msg);
 }
-
-#else
-
-void my_plugin_init (void)
-{
-    if(hal.port.num_digital_out > 0) {
-
-        relay_port = --hal.port.num_digital_out;        // "Claim" the port, M62-M65 cannot be used
-//        relay_port = hal.port.num_digital_out - 1;    // Do not "claim" the port, M62-M65 can be used
-
-        if(hal.port.set_pin_description)
-            hal.port.set_pin_description(Port_Digital, Port_Output, relay_port, "Probe relay");
-
-        memcpy(&user_mcode, &hal.user_mcode, sizeof(user_mcode_ptrs_t));
-
-        hal.user_mcode.check = mcode_check;
-        hal.user_mcode.validate = mcode_validate;
-        hal.user_mcode.execute = mcode_execute;
-
-        driver_reset = hal.driver_reset;
-        hal.driver_reset = probe_reset;
-
-        on_report_options = grbl.on_report_options;
-        grbl.on_report_options = report_options;
-
-        grbl.on_probe_fixture = probe_fixture;
-
-    } else
-        protocol_enqueue_rt_command(warning_msg);
-}
-
-#endif
