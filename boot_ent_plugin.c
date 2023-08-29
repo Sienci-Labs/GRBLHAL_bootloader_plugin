@@ -97,7 +97,7 @@ static void warning_msg (uint_fast16_t state)
 }
 
 
-void my_plugin_init (void)
+void boot_entry_init (void)
 {
     
 	on_report_options = grbl.on_report_options;
