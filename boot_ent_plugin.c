@@ -68,9 +68,9 @@ hal.stream.write("Entering UF2 Bootloader" ASCII_EOL);
 return Status_OK;
 }
 
-const sys_command_t boot_command_list[] = {
-    {"DFU", On, enter_dfu},
-	{"UF2", On, enter_uf2}
+const sys_command_t boot_command_list[2] = {
+    {"DFU", enter_dfu, { .noargs = On }},
+	{"UF2", enter_uf2, { .noargs = On }}
 };
 
 static sys_commands_t boot_commands = {
